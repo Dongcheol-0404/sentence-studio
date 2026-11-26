@@ -2,6 +2,7 @@ const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/st
 class Element{constructor(){this.children=[];this.value='';this.style={};this.classList={toggle(){}}}append(...els){this.children.push(...els)}replaceChildren(...els){this.children=els}setAttribute(){} }
 const elements=new Map(),storage=new Map();
 const ctx=vm.createContext({document:{getElementById:id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id)},createElement:()=>new Element()},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},console,setTimeout,Blob,URL});
+vm.runInContext(fs.readFileSync('dist/grammar.js','utf8'),ctx);
 vm.runInContext(fs.readFileSync('dist/app.js','utf8'),ctx);
 const run=s=>vm.runInContext(s,ctx);
 assert.equal(run('deck.questions.length'),5);
@@ -44,3 +45,23 @@ run('start(decks[1])');assert.equal(run('$("difficultySelect").disabled'),true);
 assert.equal(run('hasLevels(JSON.parse(JSON.stringify(demo)))'),true);
 assert.equal(run('hasLevels({questions:[{chunks:["a","b","c"],easyChunks:["a","wrong"]}]})'),false);
 console.log('PASS: 15 sentence/level combinations, equivalent sentences, ordered chunk counts, separate progress, level switching, hints, review, summary, custom-deck fallback and portable level data.');
+run('start(demo)');
+for(let i=0;i<5;i++){
+  run(`position=${i};loadQuestion()`);
+  for(const level of ['easy','medium','hard']){
+    change(level);
+    assert.equal(run('!!grammarForCurrent()'),true);
+    assert.equal(run("normalize(grammarForCurrent().parts.map(p=>p[1]).join(' '))"),run("normalize(current().chunks.join(' '))"));
+    run('$("grammarBtn").onclick()');
+    assert.equal(run('$("grammarPanel").hidden'),false);
+    assert.equal(run('selected.length'),0);
+    assert.equal(run('status().hints'),0);
+    assert.equal(run('status().grammarHints'),1);
+    run('$("grammarBtn").onclick()');assert.equal(run('$("grammarPanel").hidden'),true);
+    run('selected=current().chunks.map((_,j)=>j);$("checkBtn").onclick()');
+    assert.match(run('$("feedback").textContent'),/힌트 없이/);
+  }
+}
+run('start(decks[1]);$("grammarBtn").onclick()');assert.equal(run('$("grammarBtn").disabled'),true);assert.equal(run('$("grammarPanel").hidden'),true);
+run('start(demo);$("grammarBtn").onclick();position=1;loadQuestion()');assert.equal(run('grammarOpen'),false);
+console.log('PASS: grammar data matches all 15 variants, open/close, separate hint counts, no answer mutation, honest success feedback and custom-activity fallback.');

@@ -1,4 +1,4 @@
-// Curated explanations for the five sample sentences; no automatic parsing.
+// Curated explanations for the original five sample sentences (lessons.js adds 15); no automatic parsing.
 // Labels describe phrases/clauses, not the part of speech of each word.
 const GRAMMAR_NOTES = [
   {

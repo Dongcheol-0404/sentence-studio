@@ -31,10 +31,16 @@ $('difficultySelect').onchange=e=>{
 const KEY='sentence-studio-decks-v1';
 function validDeck(d){return d&&typeof d.title==='string'&&d.title.trim().length>0&&d.title.length<=60&&Array.isArray(d.questions)&&d.questions.length>0&&d.questions.length<=50&&d.questions.every(q=>q&&Array.isArray(q.chunks)&&q.chunks.length>=2&&q.chunks.length<=20&&q.chunks.every(c=>typeof c==='string'&&c.trim().length>0&&c.length<=200)&&typeof q.meaning==='string'&&q.meaning.length<=500)}
 let custom=[];try{let data=JSON.parse(localStorage.getItem(KEY)||'[]');if(Array.isArray(data))custom=data.filter(validDeck).map((d,i)=>({...d,id:'saved-'+i}))}catch{}
-let decks=[demo,...custom],deck=demo,order=[],position=0,states=[],selected=[],shuffled=[],reviewing=false;
-function persist(){try{localStorage.setItem(KEY,JSON.stringify(decks.slice(1)));return true}catch{return false}}
+const BUILTIN_DECKS=[demo,...EXTRA_LESSONS];
+demo.shortTitle='일상과 성장';
+let decks=[...BUILTIN_DECKS,...custom],deck=demo,order=[],position=0,states=[],selected=[],shuffled=[],reviewing=false;
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(decks.filter(d=>!BUILTIN_DECKS.includes(d))));return true}catch{return false}}
 function shuffle(ids){let a=[...ids];for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}if(a.every((v,i)=>v===ids[i])&&a.length>1)a.push(a.shift());return a}
-function renderSelect(){ $('deckSelect').replaceChildren(...decks.map(d=>{let o=document.createElement('option');o.value=d.id;o.textContent=d.title;return o}));$('deckSelect').value=deck.id;}
+function renderSelect(){ $('deckSelect').replaceChildren(...decks.map(d=>{let o=document.createElement('option');o.value=d.id;o.textContent=d.title+' ('+d.questions.length+'문장)';return o}));$('deckSelect').value=deck.id;renderTopics();}
+function renderTopics(){
+  $('topicChoices').replaceChildren(...BUILTIN_DECKS.map(d=>{const b=document.createElement('button');b.textContent=d.shortTitle+' · '+d.questions.length;b.className='topic-chip';b.setAttribute('aria-pressed',String(d===deck));b.onclick=()=>start(d);return b}));
+  $('activeTopic').textContent=deck.title;
+}
 function start(d){deck=d;order=d.questions.map((_,i)=>i);position=0;reviewing=false;if(!hasLevels(d))difficulty='medium';levelStates={};states=levelStates[difficulty]=newStates();renderSelect();updateDifficulty();loadQuestion()}
 function current(){
   const q=deck.questions[order[position]];
